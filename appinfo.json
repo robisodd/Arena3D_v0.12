@@ -1,0 +1,105 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "robisodd",
+    "longName": "Arena3D v0.11 beta",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/texture.png",
+                "name": "STONE",
+                "type": "png"
+            },
+            {
+                "file": "images/ceiling.png",
+                "name": "CEILING_LIGHTS",
+                "type": "png"
+            },
+            {
+                "file": "images/floor.png",
+                "name": "FLOOR_TILE",
+                "type": "png"
+            },
+            {
+                "file": "images/3DICON.png",
+                "menuIcon": true,
+                "name": "ICON",
+                "type": "png"
+            },
+            {
+                "file": "images/circle.png",
+                "name": "WALL_CIRCLE",
+                "type": "png"
+            },
+            {
+                "file": "images/brick.png",
+                "name": "WALL_BRICK",
+                "type": "png"
+            },
+            {
+                "file": "images/Smiley.png",
+                "name": "SPRITE_SMILEY",
+                "type": "png"
+            },
+            {
+                "file": "images/Smiley-Mask.png",
+                "name": "SPRITE_SMILEY_MASK",
+                "type": "png"
+            },
+            {
+                "file": "images/grass.png",
+                "name": "GRASS",
+                "type": "png"
+            },
+            {
+                "file": "images/redbrick-bw.png",
+                "name": "REDBRICK",
+                "type": "png"
+            },
+            {
+                "file": "images/Grass-64.png",
+                "name": "GRASS64",
+                "type": "png"
+            },
+            {
+                "file": "images/wood-16.png",
+                "name": "WOOD16",
+                "type": "png"
+            },
+            {
+                "file": "images/PrizeBox.png",
+                "name": "PrizeBox",
+                "type": "png"
+            },
+            {
+                "file": "images/test-4color.png",
+                "name": "TEST4",
+                "type": "png"
+            },
+            {
+                "file": "images/test-2color.png",
+                "name": "TEST2",
+                "type": "png"
+            },
+            {
+                "file": "images/test-16color.png",
+                "name": "TEST16",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "Arena3D",
+    "targetPlatforms": [
+        "aplite",
+        "basalt"
+    ],
+    "uuid": "667971ee-babe-4ae6-8b88-9a17401af25e",
+    "versionLabel": "0.11",
+    "watchapp": {
+        "watchface": false
+    }
+}
