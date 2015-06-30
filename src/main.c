@@ -305,5 +305,5 @@ int main(void) {
 // 2: xoffset = (y * ray.dist / box.size.h) >> 16;
 //    was 
 // total_column_height = box.size.h / (dist>>16) (Total height of 32pixel wall half. This isn't clipped to screen, so could be thousands of pixels tall)
-// i IS clipped to screen and goes from 3D view's middle to 3D view's top/bottom edge
-// which pixel in the texture hit is i/total_colum_height = i / (box.size.h / (dist>>16)) = (i * dist / box.size.h) >> 16
+// y IS clipped to screen and goes from 3D view's middle to 3D view's top/bottom edge
+// which pixel in the texture hit = i/total_colum_height = y / (box.size.h / (dist>>16)) = (y * dist / box.size.h) >> 16

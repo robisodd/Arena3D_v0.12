@@ -28,7 +28,7 @@ int8_t  sign8 (int8_t  x){return (x > 0) - (x < 0);}
 int16_t sign16(int16_t x){return (x > 0) - (x < 0);}
 int32_t sign32(int32_t x){return (x > 0) - (x < 0);}
 
-
+uint8_t log16 (uint16_t x){uint8_t l=0; while (x>>=1) l++; return l;}
   
 
 // get_gbitmapformat_text from: https://github.com/rebootsramblings/GBitmap-Colour-Palette-Manipulator/blob/master/src/gbitmap_color_palette_manipulator.c
@@ -70,18 +70,24 @@ void LoadMapTextures() {
   const int Texture_Resources[] = {
     RESOURCE_ID_TEST2,            // 0
     RESOURCE_ID_TEST4,            // 1
-    RESOURCE_ID_TEST16,           // 2
-    RESOURCE_ID_REDBRICK          // 3
+    //RESOURCE_ID_TEST16,         // 2
+    //RESOURCE_ID_WALL_BRICK,     // 4
+    //RESOURCE_ID_REDBRICK
+    RESOURCE_ID_BRICK32,          // 2
+    RESOURCE_ID_circle32          // 3
   };
   
   for(int i=0; i<MAX_TEXTURES; ++i) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", i);
+    //APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", i);
     texture[i].bmp = gbitmap_create_with_resource(Texture_Resources[i]);
     texture[i].data = (uint8_t*)gbitmap_get_data(texture[i].bmp);
-    
+    //#define uint16_t gbitmap_get_bytes_per_row(const GBitmap * bitmap)
+      
     if(texture[i].bmp==NULL) {
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Failed to load texture: %d", i);
     } else {
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "%d: %d %d", i, gbitmap_get_bytes_per_row(texture[i].bmp), (uint16_t)log16(gbitmap_get_bytes_per_row(texture[i].bmp)));
+      
       #ifdef PBL_COLOR
         if(gbitmap_get_format(texture[i].bmp)==GBitmapFormat1Bit) {
           gbitmap_set_data(texture[i].bmp, texture[i].data, GBitmapFormat1BitPalette, gbitmap_get_bytes_per_row(texture[i].bmp), true);
@@ -99,6 +105,7 @@ void LoadMapTextures() {
           APP_LOG(APP_LOG_LEVEL_DEBUG, "Unsupported Texture Format"); break;//Crash("Unsupported Texture Format");
         }
       #endif
+      texture[i].bytes_per_row= log16(gbitmap_get_bytes_per_row(texture[i].bmp));
 /*
 Format  (Bytes/Row)  (Bytes/Row)/2   px/byte   px/byte-1(mask)   bit/px  number_of_colors-1     Bytes/Row  px/byte px/byte-1   bit/px  number_of_colors-1
 1bit      <<3= *8        4-1= 3      >>3 = /8       7            <<0=*1       2-1= 1                3         3       7        0            1
@@ -143,18 +150,18 @@ void GenerateSquareMap() {
   squaretype[0].face[0]=squaretype[0].face[1]=squaretype[0].face[2]=squaretype[0].face[3]=squaretype[0].floor=squaretype[0].ceiling=0;
   squaretype[1].face[0]=squaretype[1].face[1]=squaretype[1].face[2]=squaretype[1].face[3]=squaretype[1].floor=squaretype[1].ceiling=1;
   squaretype[2].face[0]=squaretype[2].face[1]=squaretype[2].face[2]=squaretype[2].face[3]=squaretype[2].floor=squaretype[2].ceiling=2;
-  squaretype[3].face[0]=squaretype[3].face[1]=squaretype[3].face[2]=squaretype[3].face[3]=squaretype[3].floor=squaretype[3].ceiling=2;
+  squaretype[3].face[0]=squaretype[3].face[1]=squaretype[3].face[2]=squaretype[3].face[3]=squaretype[3].floor=squaretype[3].ceiling=3;
   
   for (int16_t i=0; i<mapsize*mapsize; i++)
     map[i] = 1;                            // inside floor/ceiling
   
   for (int16_t i=0; i<mapsize; i++) {
-    map[i*mapsize + 0]           = 128+0;  // west wall               128+1 for all
-    map[i*mapsize + mapsize - 1] = 128+1;  // east wall
-    map[i]                       = 128+2;  // north wall
+    map[i*mapsize + 0]           = 128+3;  // west wall               128+1 for all
+    map[i*mapsize + mapsize - 1] = 128+3;  // east wall
+    map[i]                       = 128+3;  // north wall
     map[(mapsize-1)*mapsize + i] = 128+3;  // south wall
   }
-  map[((mapsize/2) * mapsize) + (mapsize/2)] = 128+1;  // middle block
+  map[((mapsize/2) * mapsize) + (mapsize/2)] = 128+3;  // middle block
 
   
    player.x = 1 * 64; player.y = (64*mapsize)/2; player.facing=0;    // start inside

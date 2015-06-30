@@ -23,6 +23,8 @@ extern RayStruct ray;
 //     for(uint16_t x=0; x<19; x++)
 //       ((uint8_t*)(((GBitmap*)ctx)->addr))[yaddr+x] = data[y%8];
 // }
+//for(uint16_t y=0,; y<168*144; y+=144) for(uint16_t x=0; x<144; x++) screen[y+x] = 0b11000110;  // Fill with Blue background
+//for(uint16_t i=0; i<168*144; i++) screen[i] = 0b11000110;  // Fill entire screen with Blue background
 
 void draw_textbox(GContext *ctx, GRect textframe, char *text) {
     graphics_context_set_fill_color(ctx, GColorBlack);   graphics_fill_rect(ctx, textframe, 0, GCornerNone);  //Black Solid Rectangle
@@ -86,21 +88,20 @@ void draw_3D(GContext *ctx, GRect box) { //, int32_t zoom) {
   int32_t dx, dy;
   int16_t angle;
   int32_t farthest = 0; //colh, z;
-  int32_t y, colheight, halfheight;
+  int32_t y, colheight, halfheight, bottom_half;
   uint32_t x, addr, addr2, xoffset, yoffset;
   //uint32_t *target, *mask;
   uint8_t *target;
   uint8_t *palette;
   uint8_t txt;
 
-  ///  int32_t dist[144];                 // Array of non-cos adjusted distance for each vertical wall segment -- for sprite rendering
-  halfheight = (box.size.h-1)>>1;         // Subtract one in case even number height (so drawing doesn't go out of bounds)
-  //lowhalfheight = (box.size.h)>>1;        // Subtract one in case even number height (so drawing doesn't go out of bounds)
-  int32_t halfadd = (box.size.h&1) ? 0 : 144; // whether bottom-half column starts at the same center pixel or one below (due to odd/even box.size.h)
+  int32_t dist[144];                 // Array of non-cos adjusted distance for each vertical wall segment -- for sprite rendering
+  halfheight = (box.size.h-1)>>1;         // Subtract one in case height is an even number
+  bottom_half = (box.size.h&1) ? 0 : 144; // whether bottom-half column starts at the same center pixel or one below (due to odd/even box.size.h)
 
   // Draw background
   //graphics_context_set_fill_color(ctx, GColorBlack);  graphics_fill_rect(ctx, box, 0, GCornerNone); // Black background
-  graphics_context_set_fill_color(ctx, GColorCobaltBlue);  graphics_fill_rect(ctx, box, 0, GCornerNone); // Blue background
+  //graphics_context_set_fill_color(ctx, GColorCobaltBlue);  graphics_fill_rect(ctx, box, 0, GCornerNone); // Blue background
   // Draw Sky from horizion on up, rotate based upon player angle
   //graphics_context_set_fill_color(ctx, 1); graphics_fill_rect(ctx, GRect(box.origin.x, box.origin.y, box.size.w, box.size.h/2), 0, GCornerNone);    // White Sky  (Lightning?  Daytime?)
   //graphics_context_set_stroke_color(ctx, GColorOrange); graphics_draw_rect(ctx, GRect(box.origin.x-1, box.origin.y-1, box.size.w+2, box.size.h+2)); // Draw Box around view (not needed if fullscreen)
@@ -108,7 +109,15 @@ void draw_3D(GContext *ctx, GRect box) { //, int32_t zoom) {
   GBitmap* framebuffer = graphics_capture_frame_buffer(ctx);
   if(framebuffer) {   // if successfully captured the framebuffer
     uint8_t* screen = gbitmap_get_data(framebuffer);
-
+ 
+    
+    
+    
+    for(addr=(box.origin.y*144)+box.origin.x, y=0; y<box.size.h; addr+=144-box.size.w,++y)
+      for(uint16_t x=0; x<box.size.w; ++x, ++addr)
+        screen[addr] = 0b11000110;  // Fill with Blue background
+    
+    
     // Draw Box around view (not needed if fullscreen)
     #if view_border
     {
@@ -128,13 +137,15 @@ void draw_3D(GContext *ctx, GRect box) { //, int32_t zoom) {
     }
     #endif
 
-    for(int16_t col = 0; col < box.size.w; col++) {        // Begin RayTracing Loop
+      
+    x = box.origin.x;  // X screen coordinate
+    for(int16_t col = 0; col < box.size.w; ++col, ++x) {        // Begin RayTracing Loop
       angle = atan2_lookup((64*col/box.size.w) - 32, 64);    // dx = (64*(col-(box.size.w/2)))/box.size.w; dy = 64; angle = atan2_lookup(dx, dy);
 
       shoot_ray(player.x, player.y, player.facing + angle);  //Shoot rays out of player's eyes.  pew pew.
       ray.hit &= 127;                                        // Whether ray hit a block (>127) or not (<128), set ray.hit to valid block type [0-127]
       if(ray.dist > (uint32_t)farthest) farthest = ray.dist; // farthest (furthest?) wall (for sprite rendering. only render sprites closer than farthest wall)
-      ///    dist[col] = (uint32_t)ray.dist;                        // save distance of this column for sprite rendering later
+      dist[col] = (uint32_t)ray.dist;                        // save distance of this column for sprite rendering later
       ray.dist *= cos_lookup(angle);                         // multiply by cos to stop fisheye lens (should be >>16 to get actual dist, but that's all done below)
       //ray.dist <<= 16;                                     // use this if commenting out "ray.dist*=cos" line above, cause it >>16's a lot below
       colheight = (box.size.h << 21) /  ray.dist;    // half wall segment height = box.size.h * wallheight * 64(the "zoom factor") / (distance >> 16) // now /2 (<<21 instead of 22)
@@ -150,15 +161,20 @@ void draw_3D(GContext *ctx, GRect box) { //, int32_t zoom) {
       // Draw Color Walls
       txt = squaretype[ray.hit].face[ray.face];
       palette = texture[txt].palette;
-      target = texture[txt].data + (ray.offset<<texture[txt].bytes_per_row) + (1<<(texture[txt].bytes_per_row-1)); // put pointer in the middle of row texture.y=ray.offset
-      x = col+box.origin.x;  // X screen coordinate
-      addr = x + ((box.origin.y + halfheight) * 144); // address of screen pixel vertically centered at column X. (Address=xaddr + yaddr = Pixel.X + 144*Pixel.Y)
-      addr2 = addr + halfadd;                         // If box.size.h is even, there's no center pixel (else top and bottom half_column_heights are different), so start bottom column one pixel lower (or not, if h is odd)
+      //target = texture[txt].data + (ray.offset<<texture[txt].bytes_per_row) + (1<<(texture[txt].bytes_per_row-1)); // put pointer in the middle of row texture.y=ray.offset (pointer = texture's upper left [0,0] + y*)
+      target = texture[txt].data + ((ray.offset&31)<<texture[txt].bytes_per_row);//// + (1<<(texture[txt].bytes_per_row-1)); // put pointer in the middle of row texture.y=ray.offset (pointer = texture's upper left [0,0] + y*)
+      
+      addr = x + ((box.origin.y + halfheight) * 144); // address of screen pixel vertically centered at column X
+      addr2 = addr + bottom_half;                         // If box.size.h is even, there's no center pixel (else top and bottom half_column_heights are different), so start bottom column one pixel lower (or not, if h is odd)
       y=0; yoffset=0;  // y is y +/- from vertical center, yoffset is the screen memory position of y (and is always = y*144)
       for(; y<=colheight; y++, yoffset+=144) {
         xoffset =  ((y * ray.dist / box.size.h) >> 16); // xoffset = which pixel of the texture is hit (0-31).  See Footnote 2
-        screen[addr  - yoffset] = palette[(*(target - 1 - (xoffset>>texture[txt].pixels_per_byte)) >> ((                                 (xoffset&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel)&texture[txt].colormax)];  // Draw Top Half
-        screen[addr2 + yoffset] = palette[(*(target     + (xoffset>>texture[txt].pixels_per_byte)) >> (((7>>texture[txt].bits_per_pixel)-(xoffset&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel)&texture[txt].colormax)];  // Draw Bottom Half (Texture is horizontally mirrored top half)
+        uint32_t topoffset=(31-xoffset)&31;
+        uint32_t botoffset=(xoffset+32)&31;
+        screen[addr  - yoffset] = palette[(*(target - 1 - (topoffset>>texture[txt].pixels_per_byte)) >> ((                                 (topoffset&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel)&texture[txt].colormax)];  // Draw Top Half
+        screen[addr2 + yoffset] = palette[(*(target     + (botoffset>>texture[txt].pixels_per_byte)) >> (((7>>texture[txt].bits_per_pixel)-(botoffset&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel)&texture[txt].colormax)];  // Draw Bottom Half (Texture is horizontally mirrored top half)
+//         screen[addr  - yoffset] = palette[(*(target - 1 - (xoffset>>texture[txt].pixels_per_byte)) >> ((                                 (xoffset&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel)&texture[txt].colormax)];  // Draw Top Half
+//         screen[addr2 + yoffset] = palette[(*(target     + (xoffset>>texture[txt].pixels_per_byte)) >> (((7>>texture[txt].bits_per_pixel)-(xoffset&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel)&texture[txt].colormax)];  // Draw Bottom Half (Texture is horizontally mirrored top half)
       }
       // End Draw Walls
       
@@ -170,17 +186,21 @@ void draw_3D(GContext *ctx, GRect box) { //, int32_t zoom) {
         int32_t map_y = player.y + (temp_y / y);     // map_y = player.y + dist_y, dist = (height/2 * 64 * (sin if y, cos if x) / i) (/cos to un-fisheye)
         ray.hit = getmap(map_x, map_y) & 127;        // ceiling/ground of which cell is hit.  &127 shouldn't be needed since it *should* be hitting a spot without a wall
 
-        map_x&=63; map_y&=63; // Get position on texture
+        //map_x&=63; map_y&=63; // Get position on texture
+        map_x&=31; map_y&=31; // Get position on texture
         txt=squaretype[ray.hit].ceiling; screen[addr  - yoffset] = texture[txt].palette[(((*(texture[txt].data + ((   map_x)<<texture[txt].bytes_per_row) + (map_y>>texture[txt].pixels_per_byte))) >> (((7>>texture[txt].bits_per_pixel)-(map_y&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel))&texture[txt].colormax)];
-        txt=squaretype[ray.hit].floor;   screen[addr2 + yoffset] = texture[txt].palette[(((*(texture[txt].data + ((63-map_x)<<texture[txt].bytes_per_row) + (map_y>>texture[txt].pixels_per_byte))) >> (((7>>texture[txt].bits_per_pixel)-(map_y&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel))&texture[txt].colormax)];
+        //txt=squaretype[ray.hit].floor;   screen[addr2 + yoffset] = texture[txt].palette[(((*(texture[txt].data + ((63-map_x)<<texture[txt].bytes_per_row) + (map_y>>texture[txt].pixels_per_byte))) >> (((7>>texture[txt].bits_per_pixel)-(map_y&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel))&texture[txt].colormax)];
+        txt=squaretype[ray.hit].floor;   screen[addr2 + yoffset] = texture[txt].palette[(((*(texture[txt].data + ((31-map_x)<<texture[txt].bytes_per_row) + (map_y>>texture[txt].pixels_per_byte))) >> (((7>>texture[txt].bits_per_pixel)-(map_y&(7>>texture[txt].bits_per_pixel)))<<texture[txt].bits_per_pixel))&texture[txt].colormax)];
       } // End Floor/Ceiling
+dist[col] = dist[col] + 10;
+      ray.hit = dist[col];
     } // End RayTracing Loop
 
-
+    
     /*  Currently sprites are not working in color
     
     
-    NOTE! Sprites should be able to be semi-translucent!
+//    NOTE! Sprites should be able to be semi-translucent!
     
 // =======================================SPRITES====================================================
   // Draw Sprites!
@@ -290,7 +310,7 @@ void draw_3D(GContext *ctx, GRect box) { //, int32_t zoom) {
 
 // =======================================END SPRITES====================================================
 
-    */
+     */
     graphics_release_frame_buffer(ctx, framebuffer);
   }  // endif successfully captured framebuffer
 

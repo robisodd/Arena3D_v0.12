@@ -91,6 +91,8 @@ int8_t  sign8 (int8_t  x);
 int16_t sign16(int16_t x);
 int32_t sign32(int32_t x);
 
+//y=Log(x) base 2 (opposite of x=1<<y: Converts 32 to 5, 16 to 4, 65536 to 16)
+uint8_t log16 (uint16_t x);
 
 void LoadMapTextures();
 void UnLoadMapTextures();

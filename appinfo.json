@@ -4,10 +4,20 @@
         ""
     ],
     "companyName": "robisodd",
-    "longName": "Arena3D v0.11 beta",
+    "longName": "Arena3D Beta",
     "projectType": "native",
     "resources": {
         "media": [
+            {
+                "file": "images/brick32.png",
+                "name": "BRICK32",
+                "type": "png"
+            },
+            {
+                "file": "images/circle32.png",
+                "name": "circle32",
+                "type": "png"
+            },
             {
                 "file": "images/texture.png",
                 "name": "STONE",
@@ -92,13 +102,13 @@
         ]
     },
     "sdkVersion": "3",
-    "shortName": "Arena3D",
+    "shortName": "Arena3D\u03b2",
     "targetPlatforms": [
         "aplite",
         "basalt"
     ],
     "uuid": "667971ee-babe-4ae6-8b88-9a17401af25e",
-    "versionLabel": "0.11",
+    "versionLabel": "0.12",
     "watchapp": {
         "watchface": false
     }

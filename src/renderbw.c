@@ -52,13 +52,13 @@ void draw_map(GContext *ctx, GRect box, int32_t zoom) {
       yonmap = yonmapinit;
       yaddr = box.origin.y * 5;           // Y memory address
       for(y=0; y<box.size.h; y++, yonmap++, yaddr+=5) {
-        if(yonmap>=0 && yonmap<(mapsize*zoom)) {             // If within Y bounds
+        if(yonmap>=0 && yonmap<(mapsize*zoom)) {               // If within Y bounds
           if(map[(((yonmap/zoom)*mapsize))+(xonmap/zoom)]>127) //   Map shows a wall >127
-            ctx32[xaddr + yaddr] |= ~xbit;                   //     White dot (un-invert xbit by inverting it again)
-          else                                               //   Map shows <= 0
-            ctx32[xaddr + yaddr] &= xbit;                    //     Black dot
-        } else {                                             // Else: Out of Y bounds
-          ctx32[xaddr + yaddr] &= xbit;                      //   Black dot
+            ctx32[xaddr + yaddr] |= ~xbit;                     //     White dot (un-invert xbit by inverting it again)
+          else                                                 //   Map shows <= 0
+            ctx32[xaddr + yaddr] &= xbit;                      //     Black dot
+        } else {                                               // Else: Out of Y bounds
+          ctx32[xaddr + yaddr] &= xbit;                        //   Black dot
         }
       }
     } else {                                // Out of X bounds: Black vertical stripe
@@ -76,29 +76,32 @@ int32_t Q1=0, Q2=0, Q3=0, Q4=0, Q5=0;
 // implement more options
 //draw_3D_wireframe?  draw_3D_shaded?
 void draw_3D(GContext *ctx, GRect box) { //, int32_t zoom) {
-
 //mid_y = (box.size.h/2) or maybe box.origin.y + (box.size.h/2) (middle in view or pixel on screen)
 //mid_x = (box.size.w/2) or maybe box.origin.x + (box.size.w/2)
  int32_t dx, dy;
   int16_t angle;
   int32_t farthest = 0; //colh, z;
-  int32_t y, colheight, halfheight;
-  uint32_t x, addr, xaddr, yaddr, xbit, xoffset, yoffset;
+  int32_t y, colheight, halfheight, bottom_half;
+  uint32_t x, addr, addr2, xaddr, yaddr, xbit, xoffset, yoffset;
   uint32_t *target, *mask;
   int32_t dist[144];                 // Array of non-cos adjusted distance for each vertical wall segment -- for sprite rendering
-  halfheight = box.size.h/2;
+
+  halfheight = (box.size.h-1)>>1;         // Subtract one in case height is an even number
+  bottom_half = (box.size.h&1) ? 0 : 5; // whether bottom-half column starts at the same center pixel or one below (due to odd/even box.size.h)
+
   uint32_t *ctx32 = ((uint32_t*)(((GBitmap*)ctx)->addr));  // framebuffer pointer (screen memory)
   
   // Draw Box around view (not needed if fullscreen)
   //TODO: Draw straight to framebuffer
-  if(view_border) {graphics_context_set_stroke_color(ctx, 1); graphics_draw_rect(ctx, GRect(box.origin.x-1, box.origin.y-1, box.size.w+2, box.size.h+2));}  //White Rectangle Border
+  if(view_border) {graphics_context_set_stroke_color(ctx, 0); graphics_draw_rect(ctx, GRect(box.origin.x-1, box.origin.y-1, box.size.w+2, box.size.h+2));}  //White Rectangle Border
 
   // Draw background
     graphics_context_set_fill_color(ctx, 0);  graphics_fill_rect(ctx, box, 0, GCornerNone); // Black background
     // Draw Sky from horizion on up, rotate based upon player angle
     //graphics_context_set_fill_color(ctx, 1); graphics_fill_rect(ctx, GRect(box.origin.x, box.origin.y, box.size.w, box.size.h/2), 0, GCornerNone); // White Sky  (Lightning?  Daytime?)
 
-  for(int16_t col = 0; col < box.size.w; col++) {        // Begin RayTracing Loop
+   x = box.origin.x;  // X screen coordinate
+  for(int16_t col = 0; col < box.size.w; ++col, ++x) {        // Begin RayTracing Loop
     angle = atan2_lookup((64*col/box.size.w) - 32, 64);    // dx = (64*(col-(box.size.w/2)))/box.size.w; dy = 64; angle = atan2_lookup(dx, dy);
     
     shoot_ray(player.x, player.y, player.facing + angle);  //Shoot rays out of player's eyes.  pew pew.
@@ -121,30 +124,31 @@ void draw_3D(GContext *ctx, GRect box) { //, int32_t zoom) {
       //target = (uint32_t*)texture[squaretype[ray.hit].face[ray.face]]->addr + ray.offset*2;// maybe use GBitmap's size veriables to store texture size?
       target = (uint32_t*)(texture[squaretype[ray.hit].face[ray.face]].data) + ray.offset*2;// maybe use GBitmap's size veriables to store texture size?
     
-      x = col+box.origin.x;  // X screen coordinate
-      addr = (x >> 5) + ((box.origin.y + halfheight) * 5); // 32bit memory word containing pixel vertically centered at X. (Address=xaddr + yaddr = (Pixel.X/32) + 5*Pixel.Y)
-       xbit = x & 31;        // X bit-shift amount (for which bit within screen memory's 32bit word the pixel exists)
+    addr = (x >> 5) + ((box.origin.y + halfheight) * 5); // 32bit memory word containing pixel vertically centered at X. (Address=xaddr + yaddr = (Pixel.X/32) + 5*Pixel.Y)
+    xbit = x & 31;        // X bit-shift amount (for which bit within screen memory's 32bit word the pixel exists)
+    
+    addr2 = addr + bottom_half;                         // If box.size.h is even, there's no center pixel (else top and bottom half_column_heights are different), so start bottom column one pixel lower (or not, if h is odd)
     
     // Draw Wall
     y=0; yoffset=0;  // y is y +/- from vertical center, yoffset is the screen memory position of y (and is always = y*5)
     for(; y<=colheight; ++y, yoffset+=5) {
       xoffset = (y * ray.dist / box.size.h) >> 16; // xoffset = which pixel of the texture is hit (0-31).  See Footnote 2
-      ctx32[addr - yoffset] |= (((*target >> (31-xoffset))&1) << xbit);  // Draw Top Half
-      ctx32[addr + yoffset] |= (((*(target+1)  >> xoffset)&1) << xbit);  // Draw Bottom Half
+      ctx32[addr  - yoffset] |= (((*target >> (31-xoffset))&1) << xbit);  // Draw Top Half
+      ctx32[addr2 + yoffset] |= (((*(target+1)  >> xoffset)&1) << xbit);  // Draw Bottom Half
     } // End Draw Wall
 
     // Draw Floor/Ceiling
     int32_t temp_x = (((box.size.h << 5) * cos_lookup(player.facing + angle)) / cos_lookup(angle)); // Calculate now to save time later
     int32_t temp_y = (((box.size.h << 5) * sin_lookup(player.facing + angle)) / cos_lookup(angle)); // Calculate now to save time later
 //if(false)  // enable/disable floor and ceiling
-    for(; y<halfheight; y++, yoffset+=5) {         // y and yoffset continue from wall top&bottom to view edge (unless wall is taller than view edge)
+    for(; y<=halfheight; y++, yoffset+=5) {         // y and yoffset continue from wall top&bottom to view edge (unless wall is taller than view edge)
       int32_t map_x = player.x + (temp_x / y);     // map_x & map_y = spot on map the screen pixel points to
       int32_t map_y = player.y + (temp_y / y);     // map_y = player.y + dist_y, dist = (height/2 * 64 * (sin if y, cos if x) / i) (/cos to un-fisheye)
       ray.hit = getmap(map_x, map_y) & 127;        // ceiling/ground of which cell is hit.  &127 shouldn't be needed since it *should* be hitting a spot without a wall
-      if(squaretype[ray.hit].floor<MAX_TEXTURES)   // If ceiling texture exists (else just show sky)
-        ctx32[addr + yoffset] |= (((*( ((uint32_t*)texture[squaretype[ray.hit].floor].data + (map_x&63) * 2) + ((map_y&63) >> 5)) >> (map_y&31))&1) << xbit);
       if(squaretype[ray.hit].ceiling<MAX_TEXTURES) // If floor texture exists (else just show abyss)
         ctx32[addr - yoffset] |= (((*( ((uint32_t*)texture[squaretype[ray.hit].ceiling].data + (map_x&63) * 2) + ((map_y&63) >> 5)) >> (map_y&31))&1) << xbit);
+      if(squaretype[ray.hit].floor<MAX_TEXTURES)   // If ceiling texture exists (else just show sky)
+        ctx32[addr2 + yoffset] |= (((*( ((uint32_t*)texture[squaretype[ray.hit].floor].data + (map_x&63) * 2) + ((map_y&63) >> 5)) >> (map_y&31))&1) << xbit);
     } // End Floor/Ceiling
 
   } //End For (End RayTracing Loop)
