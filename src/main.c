@@ -69,13 +69,23 @@
         MAYBE TODO: 3D Drawing routine doesn't test for drawing beyond screen edges
         Border (in 3D routine) is drawn to the framebuffer now (instead of API line drawing)
         Updated 3D rendering for even&odd display heights (added addr2)
+        TODO: in ShootRay(), set face to face wall hit on block type 0 //ray.face = sin>0 ? (cos>0 ? 2 : 0) : (sin>0 ? 3 : 1);
+        Changed how drawing blank/invalid textures (e.g. blue sky) work
+        Horizontally mirrored floor texture in B&W (already did in color)
+        Changed maze rendering to not let player get stuck inside a block.
+        Added transparency functions
+        Textbox and Map now have semi-transparent backgrounds
+        Added color sprite (with transparency)
+        Sprite can now be 64x64, 32x32... more to come soon.
+        
         
   To Do:
-        Maybe X&Y coordinates can be int16 ([-32768-32767] @ 64px per block = [-512-511]: max board of 512x512=256kB)
+        Maybe X&Y coordinates can be int16 ([-32768-32767] @ 64px per block = [-512-511]: max board of 512x512=256kB), map loops
         Texture looping
         Add switches on walls to change cells
         Open doors
         Ceiling height?  Crushing
+        Transporter block (Enter 64px block) and player (and enemy?) X&Y change instantly
         
         Change how map/walls/textures/levels work:
           Levels specify size/shape, layout and which textures are to be loaded
@@ -157,6 +167,7 @@ Definitions:
   *********************************************************************************/
 // 529a7262-efdb-48d4-80d4-da14963099b9
 #include "global.h"
+
 extern PlayerStruct player;
 extern PlayerStruct object;
 extern RayStruct ray;
@@ -182,9 +193,10 @@ static void update_player() {
       walk(player.facing + (1<<14), accel.x>>5);            //   strafe (1<<14 = TRIG_MAX_ANGLE / 4)
     else                                                    // else
       player.facing = (player.facing + (accel.x<<3));       //   spin
-    //APP_LOG(APP_LOG_LEVEL_DEBUG, "%d %d %d", accel.x, accel.y, accel.z);  //
+    //if(app_logging) APP_LOG(APP_LOG_LEVEL_DEBUG, "%d %d %d", accel.x, accel.y, accel.z);
   }
 }
+
 
 static void main_loop(void *data) { 
   update_player();
@@ -193,38 +205,40 @@ static void main_loop(void *data) {
 }
 
 static void graphics_layer_update_proc(Layer *me, GContext *ctx) {
-  static char text[40];  //Buffer to hold text
   time_t sec1, sec2; uint16_t ms1, ms2, dt; // time snapshot variables, to calculate render time and FPS
   
   time_ms(&sec1, &ms1);  //1st Time Snapshot
   
   //draw_3D(ctx,  GRect(view_x, view_y, view_w, view_h));
   //draw_3D(ctx,  GRect(1, 34, 142, 128));
-  draw_3D(ctx,  GRect(1, 22, 142, 145));
-  draw_3D(ctx,  GRect(100, 110, 40, 40));  // 2nd mini-render
-   draw_map(ctx, GRect(4, 110, 40, 40), 4);
+  //draw_3D(ctx,  GRect(1, 22, 142, 145));
+  //draw_3D(ctx,  GRect(0, 0, 144, 168));
+  //draw_3D(ctx,  GRect(100, 110, 40, 40));  // 2nd mini-render
+  
+  draw_3D(ctx,  GRect(0, 12, 144, 144));
+  
+  //draw_map(ctx, GRect(4, 110, 40, 40), 4);
+  
   
   time_ms(&sec2, &ms2);  //2nd Time Snapshot
   dt = (uint16_t)(1000*(sec2 - sec1)) + ((int16_t)ms2 - (int16_t)ms1);  //dt=delta time: time between two time snapshots in milliseconds
   
-  snprintf(text, sizeof(text), "(%ld,%ld) %ldms %ldfps", (long)player.x, (long)player.y, (long)dt, (long)(1000/dt));  // What text to draw
+ static char text[40];  //Buffer to hold text
+ snprintf(text, sizeof(text), "(%ld,%ld) %ldms %ldfps", (long)player.x, (long)player.y, (long)dt, (long)(1000/dt));  // What text to draw
   //snprintf(text, sizeof(text), "(%ld,%ld) %ld %ldms %ldfps\n%ld %ld", (long)player.x, (long)player.y, (long)player.facing, (long)dt, (long)(1000/dt), (long)w, (long)h);  // What text to draw
   //snprintf(text, sizeof(text), "(%ld,%ld) %ld %ldms %ldfps", (long)player.x, (long)player.y, (long)player.facing, (long)dt, (long)(1000/dt));  // What text to draw
   //snprintf(text, sizeof(text), "%db (%ld,%ld) %d\n%ld %ld %ld %ld %ld", heap_bytes_free(), player.x, player.y, player.facing, Q1,Q2,Q3,Q4,Q5);  // What text to draw
   //draw_textbox(ctx, GRect(0, 0, 143, 32), text);
-  draw_textbox(ctx, GRect(0, 0, 143, 20), text);
-   
-  if(dt<50)                                      // If it took less than 50ms to render
-     app_timer_register(50-dt, main_loop, NULL); // Force framerate of 20FPS
-  else                                           // Else
-    app_timer_register(1, main_loop, NULL);      // Draw ASAP!
+ draw_textbox(ctx, GRect(0, 0, 143, 20), text);
+  
+  app_timer_register((dt<50)?50-dt:1, main_loop, NULL);  // Schedule Loop (If it took less than 50ms to render then force framerate of 20FPS)
 }
 
 // ------------------------------------------------------------------------ //
 //  Button Pushing
 // ------------------------------------------------------------------------ //
 void up_push_in_handler(ClickRecognizerRef recognizer, void *context) {up_button_depressed = true;
-                                                                       GenerateMazeMap(mapsize/2, 0);  // Generate maze, put enterance on middle of North side
+                                                                       GenerateMazeMap(MAP_SIZE/2, 0);  // Generate maze, put enterance on middle of North side
                                                                       }
 void up_release_handler(ClickRecognizerRef recognizer, void *context) {up_button_depressed = false;}
 void dn_push_in_handler(ClickRecognizerRef recognizer, void *context) {dn_button_depressed = true;}
@@ -271,8 +285,8 @@ static void init(void) {
   accel_data_service_subscribe(0, NULL);  // Start accelerometer
   
   srand(time(NULL));  // Seed randomizer so different map every time
-  player = (struct PlayerStruct){.x=(64*(mapsize/2)), .y=(-2 * 64), .facing=10000};    // Seems like a good place to start
-  object = (struct PlayerStruct){.x=(2 * 64), .y=(64*(mapsize/2)), .facing=10000};     // sprite position  (.facing doesn't do anything yet)
+  player = (struct PlayerStruct){.x=(64*(MAP_SIZE/2)), .y=(-2 * 64), .facing=10000};    // Seems like a good place to start
+  object = (struct PlayerStruct){.x=(2 * 64), .y=(64*(MAP_SIZE/2)), .facing=10000};     // sprite position  (.facing doesn't do anything yet)
   //GenerateRandomMap();              // generate a randomly dotted map
   //GenerateMazeMap(mapsize/2, 0);    // generate a random maze, enterane on middle of top side
   GenerateSquareMap();                // Make a big empty room
@@ -292,18 +306,3 @@ int main(void) {
   app_event_loop();
   deinit();
 }
-
-// ------------------------------------------------------------------------ //
-//  Footnotes
-// ------------------------------------------------------------------------ //
-// 1: if(abs32(dx * sin) < abs32(dy * cos)) {
-//   translates to: if("distance to x wall" is smaller than "distance to y wall")
-//      Used to be: if((dx*TRIG_MAX_RATIO/cos) < (dy*TRIG_MAX_RATIO/sin)).  Added abs cause of sign changes
-//   & before that: if(sqrt(dxx*dxx + dxy*dxy) < sqrt(dyx*dyx + dyy*dyy)), though got rid of "sqrt" on both sides
-//   To learn more: www.permadi.com/tutorial/raycast/rayc8.html
-
-// 2: xoffset = (y * ray.dist / box.size.h) >> 16;
-//    was 
-// total_column_height = box.size.h / (dist>>16) (Total height of 32pixel wall half. This isn't clipped to screen, so could be thousands of pixels tall)
-// y IS clipped to screen and goes from 3D view's middle to 3D view's top/bottom edge
-// which pixel in the texture hit = i/total_colum_height = y / (box.size.h / (dist>>16)) = (y * dist / box.size.h) >> 16

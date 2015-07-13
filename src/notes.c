@@ -1,3 +1,61 @@
+//=======================================================================================================
+// How the ShadowTable works:
+//=======================================================================================================
+// Table is a 4x64 array (was shadowtable[4][64]) for all 64 colors, and all 4 opacities.
+// It returns what a specified color would be if a specific opacity were applied.
+// Starts by assuming color is 100% of what it is (cause it is)
+// full strength color, 100%, is easy: it's the same color. (so [192 to 255] returns 192 to 255)
+// shading it to 0b10rrggbb (66% of full strength) takes each r, g and b and subtracts 1 (unless it's 0, then it stays 0)
+// shading it to 0b01rrggbb (33% of full strength) takes 66%'s and subtracts 1 from each r g b again.
+// shading it to 0b00rrggbb ( 0% of full strength) is easy, it's just 0 (well, an opaque 0b11000000=192, so [0 to 64] are all 192)
+
+//=======================================================================================================
+// How Combine Colors works to make Transparancy
+//=======================================================================================================
+// #define combine_colors(bg_color, fg_color) ((shadowtable[((~fg_color)&0b11000000) + (bg_color&63)]&63) + shadowtable[fg_color])  // macro if you don't want to use the function
+// Returns what color a pixel would be if a foreground rgba color is applied to a background rgb (no transparency for background)
+//How it works:
+// basically takes two rgb colors and one alpha, applies alpha to one color and ~alpha to other and adds them.
+// google "Alpha compositing": Result = (rgb1 * alpha) + (rgb2 * (100% - alpha))
+//
+// First, things to know:
+// argb = 0bAARRGGBB, the Alpha Channel is the first two bits (0bAA......)
+// 00 =   0% (fully transparent)
+// 01 =  33% (very transparent)
+// 10 =  66% (less transparent)
+// 11 = 100% (not transparent)
+// Inverting all the alpha bits (heh) gives the opposite alpha amount (100% - transparency)
+//  e.g. if it was 66%(10) it's now 33%(01).  if it was 0%(00) it's now 100%(11)
+// 
+//Ok, how it works:
+// (~fg_color):      Alpha channel is extracted from foreground color, and inverted (giving us 100% - transparency)
+// &0b11000000:      Mask out the alpha channel after inverting it
+// bg_color&63:      Background color is stripped of alpha channel (is now just rgb)
+// shadowtable[...]: shadowtable lookup gives us the color fg_color would be at the given transparency (built into fg_color's argb)
+// shadowtable[...]: shadowtable lookup gives us the color bg_color would be at the given inverted transparency (extracted from fg_color's argb, then inverted)
+// &63:              if shadowtable returned 0b00RRGGBB instead of 0b11RRGGBB, you could add both and add 0b11000000, but
+//                   I decided to return 0b11RRGGBB cause it's useful to return a color under a shadow.
+//                   So now you gotta either &63 both of 'em then add 0b11000000, or just &63 one of 'em.
+
+//=======================================================================================================
+//  Footnotes
+//=======================================================================================================
+// 1: if(abs32(dx * sin) < abs32(dy * cos)) {
+//   translates to: if("distance to x wall" is smaller than "distance to y wall")
+//      Used to be: if((dx*TRIG_MAX_RATIO/cos) < (dy*TRIG_MAX_RATIO/sin)).  Added abs cause of sign changes
+//   & before that: if(sqrt(dxx*dxx + dxy*dxy) < sqrt(dyx*dyx + dyy*dyy)), though got rid of "sqrt" on both sides
+//   To learn more: www.permadi.com/tutorial/raycast/rayc8.html
+
+// 2: xoffset = (y * ray.dist / box.size.h) >> 16;
+//    was 
+// total_column_height = box.size.h / (dist>>16) (Total height of 32pixel wall half. This isn't clipped to screen, so could be thousands of pixels tall)
+// y IS clipped to screen and goes from 3D view's middle to 3D view's top/bottom edge
+// which pixel in the texture hit = i/total_colum_height = y / (box.size.h / (dist>>16)) = (y * dist / box.size.h) >> 16
+
+//=======================================================================================================
+//
+//=======================================================================================================
+
 /*
 
 // implement more options

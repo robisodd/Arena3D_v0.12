@@ -1,18 +1,21 @@
 #pragma once
 #include "pebble.h"
 
-  
 #define IF_COLOR(x)     COLOR_FALLBACK(x, (void)0)
 #define IF_BW(x)        COLOR_FALLBACK((void)0, x)
-#define IF_BWCOLOR(x,y) COLOR_FALLBACK(x, y)
+#define IF_COLORBW(x,y) COLOR_FALLBACK(x, y)
+#define IF_BWCOLOR(x,y) COLOR_FALLBACK(y, x)
   
-//#define mapsize 21             // Map is mapsize * mapsize squares big
-#define mapsize 5             // Map is mapsize * mapsize squares big
+//#define MAP_SIZE 21             // Map is MAP_SIZE * MAP_SIZE squares big
+#define MAP_SIZE 10             // Map is MAP_SIZE * MAP_SIZE squares big
 #define MAX_TEXTURES 15        // Most number of textures there's likely to be.  Feel free to increase liberally, but no more than 254.
 #define MAX_SQUARETYPES 10     // Most number of different map square types (square type 0 is always out-of-bounds plus wherever else on the map uses square type 0)
+#define MAX_OBJECTS 5          // Maximum number of sprites
+//options
 #define IDCLIP false           // Walk thru walls
-#define view_border true       // Draw border around 3D viewing window
-
+#define view_border false       // Draw border around 3D viewing window
+#define app_logging false      // Whether program should log errors and info to the phone or not
+  
 #define Format1Bit 0  // Note: On Color, all 1bit images need to be converted to GBitmapFormat1BitPalette
 #define Format2Bit 1
 #define Format4Bit 2
@@ -37,6 +40,7 @@ typedef struct ObjectStruct {
   int16_t health;             //
   uint8_t type;               // Enemy, Lamp, Coin, etc
   uint8_t sprite;             // sprite_image[] and sprite_mask[] for object
+  int16_t facing;
   int32_t data1;              // 
   int32_t data2;              // 
 } ObjectStruct;
@@ -53,27 +57,24 @@ typedef struct RayStruct {
 
 typedef union TextureStruct {
   struct {
-  uint8_t format;        // (color only)            texture type    (0=Format1Bit, 1=Format2Bit, 2=Format4Bit)
-  GBitmap *bmp;          //              Pointer to texture
-  uint8_t *data;         //              Pointer to texture data
-  uint8_t *palette;      // (color only) Pointer to texture palette
-
-  uint8_t width;
-  uint8_t height;
-  uint8_t bytes_per_row; //
-  uint8_t pixels_per_byte; // Technically stores bit shifted. So instead of [8px/B, 4px/B, 2px/B] it stores [3,2,1] (8=1<<3, 4=1<<2, 2=1<<1)
-  uint8_t colormax;       // largest color in palette.  it is (1<<XbitPalette)-1 (e.g. =15 in 4bit|16color palette, =3 in 2bit|4color palette.)
+    uint8_t format;          // (color only)            texture type    (0=Format1Bit, 1=Format2Bit, 2=Format4Bit) (3=Format8Bit/pixel?)
+    uint8_t *palette;        // (color only) Pointer to texture palette
+    GBitmap *bmp;            //              Pointer to texture
+    uint8_t *data;           //              Pointer to texture data
+    uint8_t width;         // texture width  in pixels (usually 64)
+    uint8_t height;        // texture height in pixels (usually 64)
+    uint8_t bytes_per_row;   // 
+    uint8_t pixels_per_byte; // Bit shifted. So instead of [8px/B, 4px/B, 2px/B] it stores [3,2,1] (8=1<<3, 4=1<<2, 2=1<<1)
+    uint8_t colormax;        // largest color in palette.  it is (1<<XbitPalette)-1 (e.g. =15 in 4bit|16color palette, =3 in 2bit|4color palette.)
   };
-
-// Format     (Bytes/Row)  (Bytes/Row)/2   px/byte   px/byte-1(mask)   bit/px  number_of_colors-1     Bytes/Row  px/byte px/byte-1   bit/px  number_of_colors-1
-//0 = 1bit      <<3= *8        4-1= 3      >>3 = /8       7            <<0=*1       2-1= 1                3         3       7        0            1
-//1 = 2bit      <<4=*16        8-1= 7      >>2 = /4       3            <<1=*2       4-1= 3                4         2       3        1            3
-//2 = 4bit      <<5=*32       16-1=15      >>1 = /2       1            <<2=*4      16-1=15                5         1       1        2            15
-//3 = invalid                                                          <<3=*8       1-1=&0                                           3
-
   struct {
-  uint8_t bits_per_pixel;
+    uint8_t bits_per_pixel;  // number to shift (e.g. 0=1<<0=1, 1=1<<1=2, 2=1<<2=4) for how many bits represent a pixel (Occupies the same byte as format, hence the union)
   };
+// Format     (Bytes/Row)  (Bytes/Row)/2   px/byte   px/byte-1(mask)   bit/px  number_of_colors-1    Bytes/Row  px/byte px/byte-1   bit/px  number_of_colors-1
+//0 = 1bit      <<3= *8        4-1= 3      >>3 = /8       7            <<0=*1       2-1= 1               3         3       7        0            1
+//1 = 2bit      <<4=*16        8-1= 7      >>2 = /4       3            <<1=*2       4-1= 3               4         2       3        1            3
+//2 = 4bit      <<5=*32       16-1=15      >>1 = /2       1            <<2=*4      16-1=15               5         1       1        2            15
+//3 = invalid                                                          <<3=*8       1-1=&0                                          3
 } TextureStruct;
 
 

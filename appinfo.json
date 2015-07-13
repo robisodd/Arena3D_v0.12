@@ -9,18 +9,93 @@
     "resources": {
         "media": [
             {
-                "file": "images/brick32.png",
-                "name": "BRICK32",
+                "file": "images/Ball-64.png",
+                "name": "BALL_64",
                 "type": "png"
             },
             {
-                "file": "images/circle32.png",
-                "name": "circle32",
+                "file": "images/Ball-32.png",
+                "name": "BALL_32",
                 "type": "png"
             },
             {
-                "file": "images/texture.png",
+                "file": "images/Ball-16.png",
+                "name": "BALL_16",
+                "type": "png"
+            },
+            {
+                "file": "images/Ball-8.png",
+                "name": "BALL_8",
+                "type": "png"
+            },
+            {
+                "file": "images/Trogdor-2.png",
+                "name": "TROGDOR",
+                "type": "png"
+            },
+            {
+                "file": "images/TEST-64-4b.png",
+                "name": "SPRITE_64_4B",
+                "type": "png"
+            },
+            {
+                "file": "images/TEST-64-2b.png",
+                "name": "SPRITE_64_2B",
+                "type": "png"
+            },
+            {
+                "file": "images/TEST-64-1b.png",
+                "name": "SPRITE_64_1B",
+                "type": "png"
+            },
+            {
+                "file": "images/TEST-32-4b.png",
+                "name": "SPRITE_32_4B",
+                "type": "png"
+            },
+            {
+                "file": "images/TEST-32-2b.png",
+                "name": "SPRITE_32_2B",
+                "type": "png"
+            },
+            {
+                "file": "images/TEST-32-1b.png",
+                "name": "SPRITE_32_1B",
+                "type": "png"
+            },
+            {
+                "file": "images/wood.png",
+                "name": "WOOD",
+                "type": "png"
+            },
+            {
+                "file": "images/Hex Tile.png",
+                "name": "HEX_TILE",
+                "type": "png"
+            },
+            {
+                "file": "images/Prize Box.png",
+                "name": "PrizeBox",
+                "type": "png"
+            },
+            {
+                "file": "images/Stone.png",
                 "name": "STONE",
+                "type": "png"
+            },
+            {
+                "file": "images/Tile.png",
+                "name": "TILE",
+                "type": "png"
+            },
+            {
+                "file": "images/Red Brick.png",
+                "name": "REDBRICK",
+                "type": "png"
+            },
+            {
+                "file": "images/grassbw.png",
+                "name": "GRASS",
                 "type": "png"
             },
             {
@@ -29,19 +104,9 @@
                 "type": "png"
             },
             {
-                "file": "images/floor.png",
-                "name": "FLOOR_TILE",
-                "type": "png"
-            },
-            {
                 "file": "images/3DICON.png",
                 "menuIcon": true,
                 "name": "ICON",
-                "type": "png"
-            },
-            {
-                "file": "images/circle.png",
-                "name": "WALL_CIRCLE",
                 "type": "png"
             },
             {
@@ -58,51 +123,11 @@
                 "file": "images/Smiley-Mask.png",
                 "name": "SPRITE_SMILEY_MASK",
                 "type": "png"
-            },
-            {
-                "file": "images/grass.png",
-                "name": "GRASS",
-                "type": "png"
-            },
-            {
-                "file": "images/redbrick-bw.png",
-                "name": "REDBRICK",
-                "type": "png"
-            },
-            {
-                "file": "images/Grass-64.png",
-                "name": "GRASS64",
-                "type": "png"
-            },
-            {
-                "file": "images/wood-16.png",
-                "name": "WOOD16",
-                "type": "png"
-            },
-            {
-                "file": "images/PrizeBox.png",
-                "name": "PrizeBox",
-                "type": "png"
-            },
-            {
-                "file": "images/test-4color.png",
-                "name": "TEST4",
-                "type": "png"
-            },
-            {
-                "file": "images/test-2color.png",
-                "name": "TEST2",
-                "type": "png"
-            },
-            {
-                "file": "images/test-16color.png",
-                "name": "TEST16",
-                "type": "png"
             }
         ]
     },
     "sdkVersion": "3",
-    "shortName": "Arena3D\u03b2",
+    "shortName": "Arena 3D",
     "targetPlatforms": [
         "aplite",
         "basalt"
