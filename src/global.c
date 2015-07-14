@@ -232,7 +232,11 @@ void GenerateSquareMap() {
    player.x = 1 * 64; player.y = (64*MAP_SIZE)/2; player.facing=0;    // start inside
    //object.x = 2 * 64; object.y = (64*MAP_SIZE)/2; object.facing=0;    // sprite position
   for(uint8_t i=0; i<MAX_OBJECTS; ++i) {
-    object[i].x = rand()%(64*MAP_SIZE); object[i].y = rand()%(64*MAP_SIZE); object[i].facing=0; object[i].sprite=rand()%5;    // sprite position
+    object[i].x = rand()%(64*MAP_SIZE); // object's x position
+    object[i].y = rand()%(64*MAP_SIZE); // object's y position
+    object[i].facing = 0;       // unsupported.  currently, all objects have only 1 sprite and therefore don't change depending on facing.
+    object[i].sprite=rand()%5;  // Sprite for the object
+    object[i].type = 1;         // 1=exists. currently different types isn't supported, but type 0 is "nonexistent"
   }
   
    //player.x = 6 * 32 + 16; player.y = (64*MAP_SIZE)/2; player.facing=TRIG_MAX_ANGLE/2;    // start inside

@@ -57,6 +57,59 @@ void shadow_rect(GContext *ctx, GRect rect, uint8_t alpha) {
 //screen[y_addr+x_addr] = combine_colors(screen[y_addr+x_addr], color);
 //shadow_rect(ctx, GRect(0, 74, 144, 20), 0b01111111);  // shadow bar in the middle
 
+
+
+
+
+
+
+
+
+
+uint8_t number_of_objects=0;
+uint8_t sprite_list[MAX_OBJECTS];
+// goes through all sprites, sees if they still exist
+void update_and_sort_sprites() {
+  int32_t dx, dy;
+  number_of_objects=0;
+  
+  for(uint8_t i=0; i<MAX_OBJECTS; i++) {
+    if(object[i].type) {  // if exists
+      sprite_list[number_of_objects] = i;
+      number_of_objects++;
+
+      dx = object[i].x - player.x;
+      dy = object[i].y - player.y;
+      object[i].angle = atan2_lookup(dy, dx); // angle = angle between player's x,y and sprite's x,y
+      object[i].dist = (((dx^(dx>>31)) - (dx>>31)) > ((dy^(dy>>31)) - (dy>>31))) ? (dx<<16) / cos_lookup(object[i].angle) : (dy<<16) / sin_lookup(object[i].angle);
+      // object[i].dist = (((dx<0)?0-dx:dx) > ((dy<0)?0-dy:dy))                     ? (dx<<16) / cos_lookup(angle) : (dy<<16) / sin_lookup(angle);
+      // object[i].dist = (abs32(dx)>abs32(dy))                                     ? (dx<<16) / cos_lookup(angle) : (dy<<16) / sin_lookup(angle);
+      object[i].angle -= player.facing;  // angle is now angle between center view column and object. <0=left of center, 0=center column, >0=right of center
+    }
+  }
+  
+  // Insertion Sort: Sort sprite_list in order from farthest to closest
+  for(uint8_t i=1; i<number_of_objects; i++) {
+    uint8_t temp = sprite_list[i];
+    uint8_t j = i;
+    while(j>0 && object[sprite_list[j-1]].dist<object[temp].dist) {
+      sprite_list[j] = sprite_list[j-1];
+      --j;
+    }
+    sprite_list[j] = temp;
+  }
+  
+}
+
+
+
+
+
+
+
+
+
+
 // ------------------------------------------------------------------------ //
 //  Drawing to screen functions
 // ------------------------------------------------------------------------ //
@@ -289,18 +342,28 @@ void draw_3D(GContext *ctx, GRect box) { //, int32_t zoom) {
   // type
   // d
 //    note: Sprites can be semi-translucent!
-
-  uint8_t numobjects=MAX_OBJECTS;
+    
+    
+    update_and_sort_sprites();
+    
+  //uint8_t numobjects=MAX_OBJECTS;
   int32_t spritecol, objectdist;  //, xoffset, yoffset;
 //if(false)  // enable/disable drawing of sprites
-  for(uint8_t i=0; i<numobjects; i++) {
+  for(uint8_t j=0; j<number_of_objects; ++j) {
+/*    
     dx = object[i].x - player.x;
     dy = object[i].y - player.y;
     angle = atan2_lookup(dy, dx); // angle = angle between player's x,y and sprite's x,y
     objectdist =  (((dx^(dx>>31)) - (dx>>31)) > ((dy^(dy>>31)) - (dy>>31))) ? (dx<<16) / cos_lookup(angle) : (dy<<16) / sin_lookup(angle);
+    //objectdist =  (((dx<0)?0-dx:dx) > ((dy<0)?0-dy:dy)) ? (dx<<16) / cos_lookup(angle) : (dy<<16) / sin_lookup(angle);
 //     objectdist = (abs32(dx)>abs32(dy))                                   ? (dx<<16) / cos_lookup(angle) : (dy<<16) / sin_lookup(angle);
     angle = angle - player.facing;  // angle is now angle between center view column and object. <0=left of center, 0=center column, >0=right of center
-
+*/
+    uint8_t i=sprite_list[j];
+    angle = object[i].angle;
+    objectdist = object[i].dist;
+    i = object[i].sprite;
+    
     if(cos_lookup(angle)>0) { // if object is in front of player.  note: if angle = 0 then object is straight right or left of the player
       if(farthest>=objectdist) { // if ANY wall is further (or =) than object distance, then display it
         spritecol = (box.size.w/2) + ((sin_lookup(angle)*box.size.w)>>16);  // column on screen of sprite center

@@ -37,10 +37,26 @@ typedef struct PlayerStruct {
 typedef struct ObjectStruct {
   int32_t x;                  // Player's X Position (64 pixels per square)
   int32_t y;                  // Player's Y Position (64 pixels per square)
+  uint8_t alignment;          // On the ceiling, middle, or floor
+  //int16_t offset;             // Offset from alignment
+  int32_t dist;  // Distance in units between object and player
+  int16_t angle; // angle between "center column of player's view" and the object
+   //angle<0=left of center, 0=center column, >0=right of center
+   //if cos_lookup(angle)>0, object is in front of player
+   //if cos_lookup(angle)=0 then object is straight right or left of the player
+   //if cos_lookup(angle)<0, object is in behind player
+
+  //http://www.sorting-algorithms.com/
+  //http://www.sorting-algorithms.com/insertion-sort
+        //int32_t objectverticaloffset = 64 - objectheight; // on the ground
+        //int32_t objectverticaloffset = 0;               // floating in the middle
+        //int32_t objectverticaloffset = -64 + objectheight;   // on the ceiling
+
   int16_t health;             //
-  uint8_t type;               // Enemy, Lamp, Coin, etc
+  uint8_t type;               // Type 0 = Doesn't Exist.  Enemy, Lamp, Coin, etc
   uint8_t sprite;             // sprite_image[] and sprite_mask[] for object
   int16_t facing;
+  
   int32_t data1;              // 
   int32_t data2;              // 
 } ObjectStruct;
